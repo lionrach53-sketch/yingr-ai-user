@@ -1,0 +1,39 @@
+/* Chat.css - Styles spécifiques au composant Chat */
+.chat-container {
+  height: calc(100vh - 120px);
+}
+
+.messages-area {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.message.user {
+  border-left: 4px solid #3b82f6;
+}
+
+.message.assistant {
+  border-left: 4px solid #10b981;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background: #6b7280;
+  border-radius: 50%;
+  animation: typing 1.4s infinite both;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}

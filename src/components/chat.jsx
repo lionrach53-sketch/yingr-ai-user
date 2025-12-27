@@ -6,7 +6,8 @@ import ConversationSidebar from './ConversationSidebar';
 import QuickSuggestions from './QuickSuggestions';
 import VoiceRecorder from './VoiceRecorder';
 import { sendGuestMessage, uploadDocument } from '../services/api';
-import './Chat.css';
+// Attention à la casse du fichier CSS (Linux sensible à la casse)
+import './chat.css';
 
 // Flag pour activer/désactiver l'upload de fichiers côté UI
 const ENABLE_FILE_UPLOAD = false;

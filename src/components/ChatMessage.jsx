@@ -1,7 +1,7 @@
 import React from 'react';
 import SourcesDisplay from './SourcesDisplay';
 
-const ChatMessage = ({ message, onFeedback, onEdit }) => {
+const ChatMessage = ({ message, onFeedback, onEdit, onSuggestionClick }) => {
   const isUser = message.role === 'user';
   const isAI = message.role === 'ai' || message.role === 'assistant';
 
@@ -10,10 +10,14 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
   const getDisplayedContent = () => {
     if (isAI) {
       // 1. Priorité au champ "context" s'il contient des données
-      if (message.context && message.context.length > 0 && message.context[0].trim()) {
+      if (
+        message.context &&
+        message.context.length > 0 &&
+        typeof message.context[0] === 'string' &&
+        message.context[0].trim()
+      ) {
         return message.context[0];
       }
-      
       // 2. Sinon, chercher dans les autres champs
       return (
         message.content ||
@@ -23,7 +27,6 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
         ''
       );
     }
-    
     // Pour les messages utilisateur
     return (
       message.content ||
@@ -45,6 +48,9 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
   // Image ?
   const isImage =
     fileUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+
+  // ✅ Nouvelles fonctionnalités : Suggestions de dialogue
+  const hasSuggestions = message.suggestions && Array.isArray(message.suggestions) && message.suggestions.length > 0;
 
   // Formatage du texte
   const formatContent = (content) => {
@@ -82,6 +88,23 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
       '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">$1</a>'
     );
 
+    // Mise en forme des sections structurées
+    if (content.includes('Idée principale:') || content.includes('Explication:') || 
+        content.includes('Conseil pratique:') || content.includes('Avertissement:')) {
+      
+      // Mettre en évidence les titres de sections
+      formatted = formatted.replace(
+        /(Idée principale:|Explication:|Conseil pratique:|Avertissement:|Question:)/g,
+        '<strong class="text-yellow-300 font-bold">$1</strong>'
+      );
+      
+      // Ajouter des sauts de ligne avant les sections
+      formatted = formatted.replace(
+        /<br \/><strong class="text-yellow-300 font-bold">/g,
+        '<br /><br /><strong class="text-yellow-300 font-bold">'
+      );
+    }
+
     return (
       <div
         className="whitespace-pre-wrap"
@@ -91,12 +114,17 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
   };
 
   // Vérifier si la réponse est contextuelle
-  const isContextualResponse = isAI && message.context && message.context.length > 0 && message.context[0].trim();
+  const isContextualResponse =
+    isAI &&
+    message.context &&
+    message.context.length > 0 &&
+    typeof message.context[0] === 'string' &&
+    message.context[0].trim();
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
-        className={`max-w-[80%] p-4 rounded-lg break-words shadow-md
+        className={`max-w-[85%] p-4 rounded-lg break-words shadow-md
         ${
           isUser
             ? 'bg-green-600 text-white rounded-br-none'
@@ -104,17 +132,39 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
         }`}
       >
         {/* ✅ TEXTE IA / UTILISATEUR avec le contenu correct */}
-        {displayedContent && displayedContent.trim() && (
-          <div className="mb-2 leading-relaxed">
+        {displayedContent && typeof displayedContent === 'string' && displayedContent.trim() && (
+          <div className="mb-3 leading-relaxed">
             {formatContent(displayedContent)}
           </div>
         )}
 
         {/* 📚 Indicateur de réponse contextuelle */}
         {isContextualResponse && (
-          <div className="text-xs mt-1 text-green-400 flex items-center space-x-1">
-            <span>✅</span>
+          <div className="text-xs mt-1 text-green-400 flex items-center space-x-1 mb-2">
+            <span className="bg-green-900/30 p-1 rounded">✅</span>
             <span>Réponse basée sur des sources fiables</span>
+          </div>
+        )}
+
+        {/* ✅ SUGGESTIONS DE DIALOGUE */}
+        {isAI && hasSuggestions && (
+          <div className="mt-4 pt-3 border-t border-gray-600">
+            <div className="text-sm text-gray-300 mb-2 flex items-center space-x-1">
+              <span>💡</span>
+              <span>Pour continuer :</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {message.suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => onSuggestionClick && onSuggestionClick(suggestion)}
+                  className="text-xs bg-blue-900/40 hover:bg-blue-800/60 text-blue-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer border border-blue-700/50 hover:border-blue-600"
+                  title={`Poser: "${suggestion}"`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -201,19 +251,53 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
           </div>
         )}
 
+        {/* 📊 Métadonnées (optionnel) */}
+        {isAI && message.mode && (
+          <div className="text-xs mt-1 opacity-70 flex items-center space-x-2">
+            {message.mode === 'conversational' && (
+              <span className="text-green-400 flex items-center space-x-1">
+                <span>💬</span>
+                <span>Conversationnel</span>
+              </span>
+            )}
+            {message.mode === 'structured_rag' && (
+              <span className="text-blue-400 flex items-center space-x-1">
+                <span>📚</span>
+                <span>Réponse structurée</span>
+              </span>
+            )}
+            {message.mode === 'intelligent' && (
+              <span className="text-purple-400 flex items-center space-x-1">
+                <span>🤖</span>
+                <span>IA intelligente</span>
+              </span>
+            )}
+            {message.sources_utilisees > 0 && (
+              <span className="text-gray-400">
+                {message.sources_utilisees} source{message.sources_utilisees > 1 ? 's' : ''}
+              </span>
+            )}
+            {message.cache_hit && (
+              <span className="text-yellow-400" title="Réponse depuis le cache">
+                ⚡
+              </span>
+            )}
+          </div>
+        )}
+
         {/* 👍 👎 Feedback */}
         {isAI && onFeedback && (
-          <div className="flex justify-end mt-1 space-x-2">
+          <div className="flex justify-end mt-1 space-x-2 pt-2 border-t border-gray-700/50">
             <button
               onClick={() => onFeedback(message.id, true)}
-              className="text-green-400 hover:text-green-200 text-sm p-1 hover:bg-green-900/30 rounded"
+              className="text-green-400 hover:text-green-200 text-sm p-1 hover:bg-green-900/30 rounded transition-colors"
               title="Cette réponse est utile"
             >
               👍
             </button>
             <button
               onClick={() => onFeedback(message.id, false)}
-              className="text-red-400 hover:text-red-200 text-sm p-1 hover:bg-red-900/30 rounded"
+              className="text-red-400 hover:text-red-200 text-sm p-1 hover:bg-red-900/30 rounded transition-colors"
               title="Cette réponse n'est pas utile"
             >
               👎
@@ -223,10 +307,10 @@ const ChatMessage = ({ message, onFeedback, onEdit }) => {
 
         {/* ✏️ Réutiliser message utilisateur */}
         {isUser && onEdit && (
-          <div className="flex justify-end mt-1">
+          <div className="flex justify-end mt-1 pt-2 border-t border-gray-700/50">
             <button
               onClick={() => onEdit(message)}
-              className="text-xs text-gray-300 hover:text-white underline underline-offset-2"
+              className="text-xs text-gray-300 hover:text-white underline underline-offset-2 hover:bg-gray-700/30 px-2 py-1 rounded"
             >
               ✏️ Réutiliser ce message
             </button>

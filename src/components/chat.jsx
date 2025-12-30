@@ -166,6 +166,18 @@ const Chat = ({ backendOnline, initialCategory }) => {
     }, 0);
   };
   
+  // 8.7. GESTION DES SUGGESTIONS
+  const handleSuggestionClick = (suggestion) => {
+    if (!suggestion || !suggestion.trim()) return;
+    setInputMessage(suggestion);
+    // Donner le focus à la zone de saisie
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100); // Petit délai pour que l'UI se mette à jour
+  };
+  
   // 8.5. GESTION UPLOAD FICHIER
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
@@ -295,7 +307,11 @@ const Chat = ({ backendOnline, initialCategory }) => {
         // 🔊 Nouveaux champs audio (Mooré et Dioula)
         audio_url: response.audio_url || null,
         audio_mode: response.audio_mode || 'not_available',
-        language: response.language || 'fr'
+        language: response.language || 'fr',
+        // ✅ Nouveau : Suggestions de dialogue
+        suggestions: response.suggestions || [],
+        // Garder le contexte pour l'affichage
+        context: response.context || []
       };
       
       const finalMessages = [...updatedMessages, aiMessage];
@@ -304,12 +320,15 @@ const Chat = ({ backendOnline, initialCategory }) => {
       // Afficher un toast informatif selon le mode
       if (response.mode === 'intelligent') {
         const audioInfo = response.audio_url ? ' 🔊' : '';
-        toast.success(`🧠 Réponse intelligente (${response.sources_count || 0} sources RAG + LLM Mistral)${audioInfo}`, {
+        const suggestionInfo = response.suggestions && response.suggestions.length > 0 ? ` (${response.suggestions.length} suggestions)` : '';
+        toast.success(`🧠 Réponse intelligente${suggestionInfo}${audioInfo}`, {
           duration: 3000,
           icon: '🇧🇫'
         });
       } else if (response.mode === 'greeting') {
         toast.success('👋 Bienvenue ! IA locale du Burkina Faso', { duration: 2000 });
+      } else if (response.mode === 'conversational') {
+        toast.success('💬 Réponse conversationnelle', { duration: 2000 });
       }
       
       // Mettre à jour la conversation
@@ -439,7 +458,11 @@ const Chat = ({ backendOnline, initialCategory }) => {
         conversationId: convId,
         audio_url: data.audio_url || null,
         audio_mode: data.audio_mode || 'not_available',
-        language: data.language || 'fr'
+        language: data.language || 'fr',
+        // ✅ Nouveau : Suggestions de dialogue
+        suggestions: data.suggestions || [],
+        // Garder le contexte pour l'affichage
+        context: data.context || []
       };
       
       const finalMessages = [...messages, userMessage, aiMessage];
@@ -467,16 +490,13 @@ const Chat = ({ backendOnline, initialCategory }) => {
     }
   };
   
-  // 11. GESTION DU CLAVIER
+  // 12. GESTION DU CLAVIER
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSend();
     }
   };
-  
-  // Suggestions rapides (barre de catégories en haut)
-  // La sélection se fait maintenant via QuickSuggestions qui met à jour directement la catégorie
   
   return (
     <div className={`h-screen flex transition-colors duration-300 ${
@@ -655,6 +675,7 @@ const Chat = ({ backendOnline, initialCategory }) => {
                     message={message}
                     onFeedback={handleFeedback}
                     onEdit={handleEditMessage}
+                    onSuggestionClick={handleSuggestionClick}
                   />
                 ))}
                 
